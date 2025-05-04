@@ -61,7 +61,7 @@ CORS_ALLOW_CREDENTIALS = True  # 允许跨域请求携带凭证(Cookie)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",     # Vite 默认开发端口
     "http://localhost:3000",     # 可能的前端开发端口
-    'psy-test-frontend.vercel.app',  # 生产环境前端域名
+    'https://psy-test-frontend.vercel.app',  # 生产环境前端域名
 ]
 
 # 或者允许所有源（不推荐在生产环境使用）
