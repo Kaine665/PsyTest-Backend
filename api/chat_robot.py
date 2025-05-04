@@ -22,7 +22,7 @@ class ChatRobot:
                 self.client = OpenAI(api_key="sk-sWJ3obe1tZi7WaNvf7QRFFu1dkhhBgvTCImJKnycMfT3BlbkFJQUAF4n92f-Fy9K751wsNV4oj7AXHGf0LzshQnyKpYA")  # 请替换为你的OpenAI API密钥
             case "openrouter":
                 from openai import OpenAI
-                self.client = OpenAI(api_key="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", base_url="https://openrouter.ai/api/v1")
+                self.client = OpenAI(api_key="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", base_url="https://openrouter.ai/api/v1")
         
     def addUserMessage(self, userInput):
         self.messages.append({"role": "user", "content": userInput})
