@@ -1,0 +1,17 @@
+{
+  "chat_history_id": "17463344790446825",
+  "user_id": "5483926170",
+  "prompt_id": "3",
+  "patient_id": "2",
+  "update_time": "2025.05.04  12:54",
+  "content": [
+    {
+      "role": "user",
+      "content": "你好"
+    },
+    {
+      "role": "assistant",
+      "content": "你好老师。我有点紧张，不太确定应该怎么开始，但我最近确实觉得很困扰，特别是关于我和男朋友的关系……"
+    }
+  ]
+}
