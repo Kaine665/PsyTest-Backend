@@ -2,7 +2,7 @@ from .models import User, ChatHistory,Patient, Prompt
 from .chat_robot import ChatRobot
 from jinja2 import Template 
 import datetime
-
+import pytz
 
 class UserController:
     @staticmethod
@@ -29,8 +29,9 @@ class ChatHistoryController:
     
     @staticmethod
     def save_history(data):
-        # 新建chat_history时设置时间
-        now_str = datetime.datetime.now().strftime("%Y.%m.%d  %H:%M")
+        # 新建chat_history时设置北京时间
+        beijing_tz = pytz.timezone("Asia/Shanghai")
+        now_str = datetime.datetime.now(beijing_tz).strftime("%Y.%m.%d  %H:%M")
         data["update_time"] = now_str
         chat_history = ChatHistory(**data)
         chat_history.save()
@@ -55,8 +56,9 @@ class ChatHistoryController:
         if not hasattr(chat_history, "content") or not isinstance(chat_history.content, list):
             return {"success": False, "msg": "聊天记录内容格式错误"}
         chat_history.content.extend(messages_to_send)
-        # 每次追加消息时更新时间
-        chat_history.update_time = datetime.datetime.now().strftime("%Y.%m.%d  %H:%M")
+        # 每次追加消息时更新时间（北京时间）
+        beijing_tz = pytz.timezone("Asia/Shanghai")
+        chat_history.update_time = datetime.datetime.now(beijing_tz).strftime("%Y.%m.%d  %H:%M")
         chat_history.save()
         return {"success": True, "msg": "追加消息成功"}
     
