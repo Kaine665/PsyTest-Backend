@@ -31,6 +31,7 @@ ALLOWED_HOSTS = [
     'psy-test-frontend.vercel.app']
 # Application definition
 
+# 添加 cors-headers 到已安装的应用
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,10 +44,9 @@ INSTALLED_APPS = [
     'api'
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
-
+# 添加 cors-headers 中间件
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # 必须放在第一位
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -54,6 +54,40 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# CORS 配置
+CORS_ALLOW_CREDENTIALS = True  # 允许跨域请求携带凭证(Cookie)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",     # Vite 默认开发端口
+    "http://localhost:3000",     # 可能的前端开发端口
+    'psy-test-frontend.vercel.app',  # 生产环境前端域名
+]
+
+# 或者允许所有源（不推荐在生产环境使用）
+# CORS_ALLOW_ALL_ORIGINS = True
+
+# 允许的HTTP方法
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# 允许的请求头
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 ROOT_URLCONF = 'backend.urls'
