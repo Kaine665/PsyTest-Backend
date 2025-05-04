@@ -25,7 +25,10 @@ SECRET_KEY = 'django-insecure-)ld(srud0)-9p0!%x#0z5hxc8w(k5vou@gmcpgqaet_6miq6=)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['pytest-backend.onrender.com', 'psy-test-frontend.vercel.app']
+ALLOWED_HOSTS = [
+    'pytest-backend.onrender.com', 
+    'psytest-backend.onrender.com',
+    'psy-test-frontend.vercel.app']
 # Application definition
 
 INSTALLED_APPS = [
