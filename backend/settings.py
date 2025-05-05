@@ -63,6 +63,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",     # 可能的前端开发端口
     "https://psy-test-frontend.vercel.app",  # 生产环境前端域名
     "https://psytest-backend.onrender.com",  # 添加后端域名自身
+    "https://psytest-frontend-qghxpaan-kaine665.4everland.app",  # 新增前端域名
 ]
 
 # 添加更多CORS配置

@@ -21,7 +21,7 @@ class ChatHistoryController:
         if not chat_history:
             return {"success": False, "msg": "未找到聊天记录"}
         return {"success": True, "data": chat_history.__dict__}
-    
+    q
     @staticmethod
     def get_histories_by_user(user_id):
         histories = ChatHistory.load_all_by_user(user_id)
