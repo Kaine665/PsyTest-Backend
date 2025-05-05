@@ -15,4 +15,5 @@ urlpatterns = [
     path('process_message', views.process_message),
     path('get_feedback', views.get_feedback),
     path('post_messages', views.post_messages),
+    path('export_chat_histories', views.export_chat_histories),
 ]
