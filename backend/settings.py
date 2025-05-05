@@ -66,6 +66,23 @@ CORS_ALLOWED_ORIGINS = [
     "https://psytest-frontend-qghxpaan-kaine665.4everland.app",  # 新增前端域名
 ]
 
+# 临时开启允许所有源（调试时使用）
+CORS_ALLOW_ALL_ORIGINS = True  # 开启这个选项可以临时解决问题，生产环境建议关闭
+
+# 确保添加 Access-Control-Allow-Origin 头部
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'access-control-allow-origin',  # 添加这一行
+]
+
 # 添加更多CORS配置
 CORS_ALLOW_ALL_HEADERS = True
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
