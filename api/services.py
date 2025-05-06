@@ -75,7 +75,7 @@ class PromptService:
 
 class ChatService:
     @staticmethod
-    def get_chat_histories_by_user_id(user_id):
+    def get_chat_histories_by_user(user_id):
         from pymongo import MongoClient
         
         # MongoDB连接设置
