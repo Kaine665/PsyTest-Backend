@@ -186,3 +186,73 @@ class ChatService:
             "message": assistant_message,
             "chat_history": ChatHistorySerializer(chat_history).data
         }
+
+
+class ChatRobotService:
+    @staticmethod
+    def process_message(chat_history_id, user_message):
+        # 获取聊天历史
+        chat_history = ChatHistory.load(chat_history_id)
+        if not chat_history:
+            return {"success": False, "msg": "聊天历史不存在"}
+            
+        # 获取病人信息
+        patient = Patient.load(chat_history.patient_id)
+        if not patient:
+            return {"success": False, "msg": "病人信息不存在"}
+            
+        # 获取提示词
+        prompt = Prompt.load(chat_history.prompt_id)
+        if not prompt:
+            return {"success": False, "msg": "提示词信息不存在"}
+        
+        try:
+            # 使用ChatRobot生成回复
+            company = "openrouter"  # 默认使用openrouter，您可以根据需要修改
+            model = "anthropic/claude-3-opus"  # 默认使用claude-3，您可以根据需要修改
+            
+            # 创建ChatRobot实例
+            from .chat_robot import ChatRobot
+            chat_robot = ChatRobot(company, model, patient.prompt, chat_history.content)
+            
+            # 添加用户消息并生成AI回复
+            chat_robot.addUserMessage(user_message)
+            ai_response = chat_robot.generateAiResponse()
+            
+            return {"success": True, "data": ai_response}
+        except Exception as e:
+            return {"success": False, "msg": f"生成AI回复时出错: {str(e)}"}
+    
+    @staticmethod
+    def get_feedback(chat_history_id, user_message):
+        # 获取聊天历史
+        chat_history = ChatHistory.load(chat_history_id)
+        if not chat_history:
+            return {"success": False, "msg": "聊天历史不存在"}
+        
+        try:
+            # 使用ChatRobot生成督导反馈
+            company = "openrouter"  # 默认使用openrouter，您可以根据需要修改
+            model = "anthropic/claude-3-opus"  # 默认使用claude-3，您可以根据需要修改
+            
+            # 督导提示词 - 请根据实际情况修改
+            feedback_prompt = "你是一位心理咨询督导师，请对咨询师的回应给予专业的指导和建议。"
+            
+            # 创建ChatRobot实例
+            from .chat_robot import ChatRobot
+            chat_robot = ChatRobot(company, model, feedback_prompt)
+            
+            # 构建消息内容
+            user_content = f"咨询师对来访者说：{user_message}\n请给予专业督导意见。"
+            chat_robot.addUserMessage(user_content)
+            
+            # 生成督导反馈
+            feedback = chat_robot.generateAiResponse()
+            
+            # 如果反馈内容为"继续"，则不显示督导反馈
+            if feedback.strip() == "继续":
+                return {"success": True, "data": "继续"}
+            
+            return {"success": True, "data": feedback}
+        except Exception as e:
+            return {"success": False, "msg": f"生成督导反馈时出错: {str(e)}"}
