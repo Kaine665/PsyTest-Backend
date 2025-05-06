@@ -1,179 +1,188 @@
-from .models import User, ChatHistory,Patient, Prompt
+from .models import Patient, Prompt, ChatHistory
+from .serializers import PatientSerializer, PromptSerializer, ChatHistorySerializer
 from .chat_robot import ChatRobot
-from jinja2 import Template 
+import os
+import json
 import datetime
 import pytz
+import uuid
 
-class UserController:
+# 定义用户目录
+USERS_DIR = "api/src/users"
+
+class UserService:
     @staticmethod
     def login(account, password):
-        user = User.load(account)
-        if not user:
-            return {"success": False, "msg": "用户不存在"}
-        if user.password != password:
-            return {"success": False, "msg": "密码错误"}
-        return {"success": True, "msg": "登录成功"}
+        for file_name in os.listdir(USERS_DIR):
+            file_path = os.path.join(USERS_DIR, file_name)
+            with open(file_path, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+                # 确保有type字段
+                if 'type' not in data:
+                    data['type'] = 'user'
+                    
+                if data.get("account") == account and data.get("password") == password:
+                    return {"success": True, "account": account}
+        return {"success": False, "msg": "用户名或密码错误"}
 
-class ChatHistoryController:
-    @staticmethod
-    def get_history(chat_history_id):
-        chat_history = ChatHistory.load(chat_history_id)
-        if not chat_history:
-            return {"success": False, "msg": "未找到聊天记录"}
-        return {"success": True, "data": chat_history.__dict__}
-    
-    @staticmethod
-    def get_histories_by_user(user_id):
-        histories = ChatHistory.load_all_by_user(user_id)
-        return {"success": True, "data": histories}
-    
-    @staticmethod
-    def save_history(data):
-        # 新建chat_history时设置北京时间
-        beijing_tz = pytz.timezone("Asia/Shanghai")
-        now_str = datetime.datetime.now(beijing_tz).strftime("%Y.%m.%d  %H:%M")
-        data["update_time"] = now_str
-        chat_history = ChatHistory(**data)
-        chat_history.save()
-        return {"success": True, "msg": "保存成功"}
-    
-    @staticmethod
-    def delete_history(chat_history_id):
-        chat_history = ChatHistory.load(chat_history_id)
-        if not chat_history:
-            return {"success": False, "msg": "未找到聊天记录"}
-        try:
-            chat_history.delete()
-            return {"success": True, "msg": "删除成功"}
-        except Exception as e:
-            return {"success": False, "msg": f"删除失败: {str(e)}"}
-    
-    @staticmethod
-    def append_messages(chat_history_id, messages_to_send):
-        chat_history = ChatHistory.load(chat_history_id)
-        if not chat_history:
-            return {"success": False, "msg": "未找到聊天记录"}
-        if not hasattr(chat_history, "content") or not isinstance(chat_history.content, list):
-            return {"success": False, "msg": "聊天记录内容格式错误"}
-        chat_history.content.extend(messages_to_send)
-        # 每次追加消息时更新时间（北京时间）
-        beijing_tz = pytz.timezone("Asia/Shanghai")
-        chat_history.update_time = datetime.datetime.now(beijing_tz).strftime("%Y.%m.%d  %H:%M")
-        chat_history.save()
-        return {"success": True, "msg": "追加消息成功"}
-
-class PatientController:
-    @staticmethod
-    def get_patient(patient_id):
-        patient = Patient.load(patient_id)
-        if not patient:
-            return {"success": False, "msg": "未找到目标角色信息"}
-        return {"success": True, "data": patient.__dict__}
-
+class PatientService:
     @staticmethod
     def get_all_patients():
-        from .models import PATIENTS_DIR, Patient
-        import os, json
-
+        patients_dir = "api/src/patients"
         patients = []
-        try:
-            for file_name in os.listdir(PATIENTS_DIR):
-                file_path = os.path.join(PATIENTS_DIR, file_name)
-                with open(file_path, "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    patients.append(data)
-            return {"success": True, "data": patients}
-        except Exception as e:
-            print(f"读取病人数据出错: {str(e)}")
-            return {"success": False, "msg": f"读取病人数据出错: {str(e)}"}
         
-class PromptController:
-    @staticmethod
-    def get_prompt(prompt_id):
-        prompt = Prompt.load(prompt_id)
-        if not prompt:
-            return {"success": False, "msg": "未找到目标练习类型"}
-        return {"success": True, "data": prompt.__dict__}
+        for file_name in os.listdir(patients_dir):
+            file_path = os.path.join(patients_dir, file_name)
+            with open(file_path, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+                # 确保有type字段
+                if 'type' not in data:
+                    data['type'] = 'patient'
+                patients.append(data)
+                
+        # 使用序列化器验证和处理
+        serialized_patients = []
+        for patient_data in patients:
+            serializer = PatientSerializer(data=patient_data)
+            if serializer.is_valid():
+                serialized_patients.append(serializer.data)
+                
+        return serialized_patients
 
+class PromptService:
     @staticmethod
     def get_all_prompts():
-        from .models import PROMPTS_DIR
-        import os, json
-
+        prompts_dir = "api/src/prompts"
         prompts = []
-        try:
-            for file_name in os.listdir(PROMPTS_DIR):
-                file_path = os.path.join(PROMPTS_DIR, file_name)
-                with open(file_path, "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    prompts.append(data)
-            return {"success": True, "data": prompts}
-        except Exception as e:
-            print(f"读取提示数据出错: {str(e)}")
-            return {"success": False, "msg": f"读取提示数据出错: {str(e)}"}
-    
-class ChatRobotService:
+        
+        for file_name in os.listdir(prompts_dir):
+            file_path = os.path.join(prompts_dir, file_name)
+            with open(file_path, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+                # 确保有type字段
+                if 'type' not in data:
+                    data['type'] = 'prompt'
+                prompts.append(data)
+                
+        # 使用序列化器验证和处理
+        serialized_prompts = []
+        for prompt_data in prompts:
+            serializer = PromptSerializer(data=prompt_data)
+            if serializer.is_valid():
+                serialized_prompts.append(serializer.data)
+                
+        return serialized_prompts
+
+class ChatService:
     @staticmethod
-    def process_message(chat_history_id, input_value):
-        try:
-            chat_history = ChatHistory.load(chat_history_id)
-            if not chat_history:
-                return {"success": False, "msg": "未找到聊天记录"}
-            filtered_history = [msg for msg in chat_history.content if msg["role"] != "feedback"]
-            prompt_id = chat_history.prompt_id
-            patient_id = chat_history.patient_id
+    def get_chat_histories_by_user_id(user_id):
+        from pymongo import MongoClient
+        
+        # MongoDB连接设置
+        MONGO_URI = "mongodb+srv://Kaine:j877413fxt@clusterpsy.pylcmi3.mongodb.net/"
+        MONGO_DB = "PsyTest"
+        MONGO_COLLECTION = "chatHistories"
 
-            # 载入 Prompt
-            prompt_obj = Prompt.load(prompt_id)
-            if not prompt_obj:
-                return {"success": False, "msg": "未找到Prompt"}
-
-            # 载入 Patient
-            patient = Patient.load(patient_id)
-            if not patient:
-                return {"success": False, "msg": "未找到角色信息"}
-
-            # 进行jinja2模板合成
-            template = Template(prompt_obj.prompt)
-            # 这里假设模板内用到的字段有姓名、问题描述、聊天记录，可按需调整
-            prompt_text = template.render(
-                姓名=patient.patient_name,
-                问题描述=patient.prompt,
-                聊天记录="无"  # 可以根据实际情况填写
-            )
-            ai_robot = ChatRobot(company="openrouter", model="openai/gpt-4.1", prompt=prompt_text, chat_history=filtered_history)
-            ai_robot.addUserMessage(input_value)
-            ai_response = ai_robot.generateAiResponse()
-            return {"success": True, "data": ai_response}
-        except Exception as e:
-            return {"success": False, "msg": f"AI回复服务异常: {str(e)}"}
-
-    @staticmethod
-    def get_feedback(chat_history_id, input_value):
-        try:
-            chat_history = ChatHistory.load(chat_history_id)
-            if not chat_history:
-                return {"success": False, "msg": "未找到聊天记录"}
-            filtered_history = [msg for msg in chat_history.content if msg["role"] != "feedback"]
-            from .models import PROMPTS_DIR
-            import os, json
-            feedback_prompt_path = os.path.join(PROMPTS_DIR, "督导-单句反馈-prompt.json")
-            with open(feedback_prompt_path, "r", encoding="utf-8") as f:
-                feedback_prompt = json.load(f)["prompt"]
-            ai_robot = ChatRobot(company="openrouter", model="google/gemini-2.5-pro-preview-03-25", prompt=feedback_prompt, chat_history=filtered_history)
-            ai_robot.addUserMessage(input_value)
-            ai_response = ai_robot.generateAiResponse()
-            return {"success": True, "data": ai_response}
-        except Exception as e:
-            return {"success": False, "msg": f"AI反馈服务异常: {str(e)}"}
+        # 初始化MongoDB客户端
+        mongo_client = MongoClient(MONGO_URI)
+        db = mongo_client[MONGO_DB]
+        chat_collection = db[MONGO_COLLECTION]
+        
+        # 查询MongoDB获取用户的聊天历史
+        chats_cursor = chat_collection.find({"user_id": user_id})
+        chats = []
+        
+        # 处理查询结果
+        for chat in chats_cursor:
+            # 移除MongoDB的_id字段
+            if '_id' in chat:
+                del chat['_id']
+                
+            # 确保有type字段
+            if 'type' not in chat:
+                chat['type'] = 'chat_history'
+                
+            # 使用序列化器验证
+            serializer = ChatHistorySerializer(data=chat)
+            if serializer.is_valid():
+                chats.append(serializer.data)
+        
+        return chats
         
     @staticmethod
-    def append_messages(chat_history_id, messages_to_send):
+    def get_chat_history(chat_history_id):
+        # 通过模型加载聊天历史
         chat_history = ChatHistory.load(chat_history_id)
         if not chat_history:
-            return {"success": False, "msg": "未找到聊天记录"}
-        if not hasattr(chat_history, "content") or not isinstance(chat_history.content, list):
-            return {"success": False, "msg": "聊天记录内容格式错误"}
-        chat_history.content.extend(messages_to_send)
+            return None
+            
+        # 序列化返回
+        serializer = ChatHistorySerializer(chat_history)
+        return serializer.data
+    
+    @staticmethod
+    def create_chat_history(user_id, prompt_id, patient_id):
+        chat_history_id = str(uuid.uuid4())
+        current_time = datetime.datetime.now(pytz.timezone('Asia/Shanghai')).strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 创建初始聊天历史
+        chat_history = ChatHistory(
+            chat_history_id=chat_history_id,
+            user_id=user_id,
+            prompt_id=prompt_id,
+            patient_id=patient_id,
+            update_time=current_time,
+            content=[]
+        )
+        
+        # 保存到MongoDB
         chat_history.save()
-        return {"success": True, "msg": "追加消息成功"}
+        
+        # 序列化返回
+        serializer = ChatHistorySerializer(chat_history)
+        return serializer.data
+    
+    @staticmethod
+    def delete_chat_history(chat_history_id):
+        chat_history = ChatHistory.load(chat_history_id)
+        if chat_history:
+            chat_history.delete()
+            return True
+        return False
+    
+    @staticmethod
+    def chat(chat_history_id, user_message):
+        chat_history = ChatHistory.load(chat_history_id)
+        if not chat_history:
+            return {"success": False, "msg": "聊天历史不存在"}
+            
+        patient = Patient.load(chat_history.patient_id)
+        if not patient:
+            return {"success": False, "msg": "病人信息不存在"}
+            
+        prompt = Prompt.load(chat_history.prompt_id)
+        if not prompt:
+            return {"success": False, "msg": "提示词信息不存在"}
+        
+        # 添加用户消息
+        chat_history.content.append({"role": "user", "content": user_message})
+        
+        # 使用ChatRobot生成回复
+        chat_robot = ChatRobot(patient.prompt)
+        assistant_message = chat_robot.chat(chat_history.content)
+        
+        # 添加助手回复
+        chat_history.content.append({"role": "assistant", "content": assistant_message})
+        
+        # 更新时间
+        current_time = datetime.datetime.now(pytz.timezone('Asia/Shanghai')).strftime("%Y-%m-%d %H:%M:%S")
+        chat_history.update_time = current_time
+        
+        # 保存更新后的聊天历史
+        chat_history.save()
+        
+        return {
+            "success": True, 
+            "message": assistant_message,
+            "chat_history": ChatHistorySerializer(chat_history).data
+        }

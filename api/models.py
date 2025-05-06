@@ -6,21 +6,7 @@ from pymongo import MongoClient
 # Create your models here.
 USERS_DIR = "api/src/users"
 
-class User:
-    def __init__(self, account, password):
-        self.account = account
-        self.password = password
-        
-    @staticmethod
-    def load(account):
-        # 根据账号加载用户
-        for file_name in os.listdir(USERS_DIR):
-            file_path = os.path.join(USERS_DIR, file_name)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                if data.get("account") == account:
-                    return User(account=data["account"], password=data["password"])
-        return None
+from .serializers import UserSerializer, ChatHistorySerializer, PatientSerializer, PromptSerializer
 
 # MongoDB连接设置
 MONGO_URI = "mongodb+srv://Kaine:j877413fxt@clusterpsy.pylcmi3.mongodb.net/"
@@ -43,6 +29,7 @@ class ChatHistory:
         self.patient_id = patient_id
         self.update_time = update_time
         self.content = content
+        self.type = "chat_history"  # 添加type字段
         
     @staticmethod
     def load(chat_history_id):
@@ -54,38 +41,35 @@ class ChatHistory:
         # 移除MongoDB的_id字段
         if '_id' in data:
             del data['_id']
-            
-        return ChatHistory(
-            chat_history_id=data["chat_history_id"],
-            user_id=data["user_id"],
-            prompt_id=data["prompt_id"],
-            patient_id=data["patient_id"],
-            update_time=data["update_time"],
-            content=data["content"]
-        )
-            
-    @staticmethod
-    def load_all_by_user(user_id):
-        # 只从MongoDB中加载用户的所有聊天历史
-        cursor = chat_collection.find({"user_id": user_id})
-        histories = []
-        for doc in cursor:
-            # 移除MongoDB的_id字段
-            if '_id' in doc:
-                del doc['_id']
-            histories.append(doc)
         
-        return histories
-            
+        # 确保有type字段
+        if 'type' not in data:
+            data['type'] = 'chat_history'
+        
+        # 使用序列化器验证
+        serializer = ChatHistorySerializer(data=data)
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            return ChatHistory(
+                chat_history_id=validated_data["chat_history_id"],
+                user_id=validated_data["user_id"],
+                prompt_id=validated_data["prompt_id"],
+                patient_id=validated_data["patient_id"],
+                update_time=validated_data["update_time"],
+                content=validated_data["content"]
+            )
+        return None
+
     def save(self):
-        # 只保存到MongoDB
-        data_dict = self.__dict__
+        # 序列化并保存到MongoDB
+        serializer = ChatHistorySerializer(self)
+        data_dict = serializer.data
         chat_collection.update_one(
             {"chat_history_id": self.chat_history_id},
             {"$set": data_dict},
             upsert=True
         )
-    
+
     def delete(self):
         # 只从MongoDB中删除
         chat_collection.delete_one({"chat_history_id": self.chat_history_id})
@@ -103,6 +87,7 @@ class Patient:
         self.patient_name = patient_name
         self.patient_introduce = patient_introduce
         self.prompt = prompt
+        self.type = "patient"  # 添加type字段
         
     @staticmethod
     def load(patient_id):
@@ -110,12 +95,20 @@ class Patient:
             file_path = os.path.join(PATIENTS_DIR, file_name)
             with open(file_path, 'r', encoding='utf-8') as file:
                 data = json.load(file)
+                # 确保有type字段
+                if 'type' not in data:
+                    data['type'] = 'patient'
+                    
                 if data.get("patient_id") == patient_id:
-                    return Patient(
-                        patient_id=data["patient_id"],
-                        patient_name=data.get("patient_name", ""),
-                        patient_introduce=data.get("patient_introduce", ""),
-                        prompt=data.get("prompt", "")
+                    # 使用序列化器验证
+                    serializer = PatientSerializer(data=data)
+                    if serializer.is_valid():
+                        validated_data = serializer.validated_data
+                        return Patient(
+                            patient_id=validated_data["patient_id"],
+                            patient_name=validated_data.get("patient_name", ""),
+                            patient_introduce=validated_data.get("patient_introduce", ""),
+                            prompt=validated_data.get("prompt", "")
                         )
         return None
     
@@ -126,6 +119,7 @@ class Prompt:
         self.prompt_id = prompt_id
         self.prompt_type = prompt_type
         self.prompt = prompt
+        self.type = "prompt"  # 添加type字段
         
     @staticmethod
     def load(prompt_id):
@@ -133,8 +127,20 @@ class Prompt:
             file_path = os.path.join(PROMPTS_DIR, file_name)
             with open(file_path, 'r', encoding="utf-8") as file:
                 data = json.load(file)
+                # 确保有type字段
+                if 'type' not in data:
+                    data['type'] = 'prompt'
+                    
                 if data.get("prompt_id") == prompt_id:
-                    return Prompt(prompt_id=data["prompt_id"], prompt_type=data['prompt_type'], prompt=data["prompt"])
+                    # 使用序列化器验证
+                    serializer = PromptSerializer(data=data)
+                    if serializer.is_valid():
+                        validated_data = serializer.validated_data
+                        return Prompt(
+                            prompt_id=validated_data["prompt_id"], 
+                            prompt_type=validated_data["prompt_type"], 
+                            prompt=validated_data["prompt"]
+                        )
         return None
     
 CHARACTER_DIR = "api/src/characters"
