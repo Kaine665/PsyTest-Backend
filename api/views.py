@@ -10,21 +10,30 @@ from .services import UserService as UserController, ChatService as ChatHistoryC
 # Create your views here.
 @api_view(['POST'])
 def login(request):
-    # 登录所需参数
-    data = request.data
-    account = data["account"]
-    password = data["password"]
-    # 登录，并返回结果
-    result = UserController.login(account, password)
-    if result["success"]:
+    try:
+        data = request.data
+        account = data.get("account")
+        password = data.get("password")
+        if not account or not password:
+            return Response(
+                {"success": False, "msg": "缺少账号或密码"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        result = UserController.login(account, password)
+        if result.get("success"):
+            return Response(
+                {"success": True, "msg": result.get("msg", ""), "account": account},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {"success": False, "msg": result.get("msg", "登录失败")},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+    except Exception as e:
         return Response(
-            {"success": True, "msg": result["msg"], "account": account},
-            status = status.HTTP_200_OK
-        )
-    else:
-        return Response(
-            {"success": False, "msg": result["msg"]},
-            status= status.HTTP_401_UNAUTHORIZED
+            {"success": False, "msg": f"服务器异常: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
         
 @api_view(["GET"])
