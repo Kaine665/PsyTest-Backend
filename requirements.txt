@@ -2,6 +2,7 @@ django
 djangorestframework
 django-cors-headers
 pymongo[snappy,gssapi,srv,tls]
+dnspython
 mongoengine
 openai
 jinja2

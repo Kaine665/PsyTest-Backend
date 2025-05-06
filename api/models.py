@@ -1,9 +1,8 @@
-from django.db import models
-import os
+from .database import MongoDatabase
 import json
 
-# Create your models here.
-USERS_DIR = "api/src/users"
+# 创建数据库实例
+mongo_db = MongoDatabase()
 
 class User:
     def __init__(self, account, password):
@@ -13,15 +12,21 @@ class User:
     @staticmethod
     def load(account):
         # 根据账号加载用户
-        for file_name in os.listdir(USERS_DIR):
-            file_path = os.path.join(USERS_DIR, file_name)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                if data.get("account") == account:
-                    return User(account=data["account"], password=data["password"])
+        user_data = mongo_db.find_one('users', {'account': account})
+        if user_data:
+            return User(account=user_data["account"], password=user_data["password"])
         return None
 
-CHAT_HISTORIES_DIR = "api/src/chat_histories"
+    def save(self):
+        # 保存或更新用户
+        mongo_db.update_one('users', {'account': self.account}, 
+                           {'account': self.account, 'password': self.password}, 
+                           upsert=True)
+    
+    def delete(self):
+        # 删除用户
+        mongo_db.delete_one('users', {'account': self.account})
+
 
 class ChatHistory:
     def __init__(self, chat_history_id, user_id, prompt_id, patient_id, update_time, content):
@@ -34,42 +39,39 @@ class ChatHistory:
         
     @staticmethod
     def load(chat_history_id):
-        file_path = os.path.join(CHAT_HISTORIES_DIR, f"chat_history_{chat_history_id}.json")
-        if not os.path.exists(file_path):
+        # 根据ID加载聊天历史
+        data = mongo_db.find_one('chat_histories', {'chat_history_id': chat_history_id})
+        if not data:
             return None
-        with open(file_path, 'r', encoding="utf-8") as file:
-            data = json.load(file)
-            return ChatHistory(
-                chat_history_id=data["chat_history_id"],
-                user_id=data["user_id"],
-                prompt_id=data["prompt_id"],
-                patient_id=data["patient_id"],
-                update_time=data["update_time"],
-                content=data["content"]
-            )
+        return ChatHistory(
+            chat_history_id=data["chat_history_id"],
+            user_id=data["user_id"],
+            prompt_id=data["prompt_id"],
+            patient_id=data["patient_id"],
+            update_time=data["update_time"],
+            content=data["content"]
+        )
             
     @staticmethod
     def load_all_by_user(user_id):
+        # 查询用户的所有聊天历史
         histories = []
-        for file_name in os.listdir(CHAT_HISTORIES_DIR):
-            file_path = os.path.join(CHAT_HISTORIES_DIR, file_name)
-            with open(file_path, 'r', encoding="utf-8") as file:
-                data = json.load(file)
-                if data.get("user_id") == user_id:
-                    histories.append(data)
+        cursor = mongo_db.find('chat_histories', {'user_id': user_id})
+        for data in cursor:
+            histories.append(data)
         return histories
             
     def save(self):
-        file_path = os.path.join(CHAT_HISTORIES_DIR, f"chat_history_{self.chat_history_id}.json")
-        with open(file_path, 'w', encoding="utf-8") as file:
-            json.dump(self.__dict__, file, ensure_ascii=False, indent=2)
+        # 保存或更新聊天历史
+        mongo_db.update_one('chat_histories', 
+                           {'chat_history_id': self.chat_history_id}, 
+                           self.__dict__, 
+                           upsert=True)
     
     def delete(self):
-        file_path = os.path.join(CHAT_HISTORIES_DIR, f"chat_history_{self.chat_history_id}.json")
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        # 删除聊天历史
+        mongo_db.delete_one('chat_histories', {'chat_history_id': self.chat_history_id})
 
-PATIENTS_DIR = "api/src/patients"
 
 class Patient:
     def __init__(self, patient_id, patient_name, patient_introduce, prompt):
@@ -80,20 +82,37 @@ class Patient:
         
     @staticmethod
     def load(patient_id):
-        for file_name in os.listdir(PATIENTS_DIR):
-            file_path = os.path.join(PATIENTS_DIR, file_name)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                if data.get("patient_id") == patient_id:
-                    return Patient(
-                        patient_id=data["patient_id"],
-                        patient_name=data.get("patient_name", ""),
-                        patient_introduce=data.get("patient_introduce", ""),
-                        prompt=data.get("prompt", "")
-                        )
+        # 根据ID加载患者
+        data = mongo_db.find_one('patients', {'patient_id': patient_id})
+        if data:
+            return Patient(
+                patient_id=data["patient_id"],
+                patient_name=data.get("patient_name", ""),
+                patient_introduce=data.get("patient_introduce", ""),
+                prompt=data.get("prompt", "")
+            )
         return None
     
-PROMPTS_DIR = "api/src/prompts"
+    @staticmethod
+    def load_all():
+        # 加载所有患者
+        patients = []
+        cursor = mongo_db.find('patients', {})
+        for data in cursor:
+            patients.append(data)
+        return patients
+    
+    def save(self):
+        # 保存或更新患者信息
+        mongo_db.update_one('patients', 
+                           {'patient_id': self.patient_id}, 
+                           self.__dict__, 
+                           upsert=True)
+    
+    def delete(self):
+        # 删除患者
+        mongo_db.delete_one('patients', {'patient_id': self.patient_id})
+    
     
 class Prompt:
     def __init__(self, prompt_id, prompt_type, prompt):
@@ -103,14 +122,34 @@ class Prompt:
         
     @staticmethod
     def load(prompt_id):
-        for file_name in os.listdir(PROMPTS_DIR):
-            file_path = os.path.join(PROMPTS_DIR, file_name)
-            with open(file_path, 'r', encoding="utf-8") as file:
-                data = json.load(file)
-                if data.get("prompt_id") == prompt_id:
-                    return Prompt(prompt_id=data["prompt_id"], prompt_type=data['prompt_type'], prompt=data["prompt"])
+        # 根据ID加载提示
+        data = mongo_db.find_one('prompts', {'prompt_id': prompt_id})
+        if data:
+            return Prompt(
+                prompt_id=data["prompt_id"], 
+                prompt_type=data['prompt_type'], 
+                prompt=data["prompt"]
+            )
         return None
     
-CHARACTER_DIR = "api/src/characters"
+    @staticmethod
+    def load_all():
+        # 加载所有提示
+        prompts = []
+        cursor = mongo_db.find('prompts', {})
+        for data in cursor:
+            prompts.append(data)
+        return prompts
+    
+    def save(self):
+        # 保存或更新提示
+        mongo_db.update_one('prompts', 
+                           {'prompt_id': self.prompt_id}, 
+                           self.__dict__, 
+                           upsert=True)
+    
+    def delete(self):
+        # 删除提示
+        mongo_db.delete_one('prompts', {'prompt_id': self.prompt_id})
 
     

@@ -5,7 +5,9 @@ from django.http import FileResponse
 import tempfile
 import zipfile
 import os
+import json
 from .services import UserController, ChatHistoryController, PatientController, PromptController, ChatRobotService
+from .models import ChatHistory
 
 # Create your views here.
 @api_view(['POST'])
@@ -25,6 +27,32 @@ def login(request):
         return Response(
             {"success": False, "msg": result["msg"]},
             status= status.HTTP_401_UNAUTHORIZED
+        )
+
+@api_view(['POST'])
+def register(request):
+    # 注册所需参数
+    data = request.data
+    account = data.get("account")
+    password = data.get("password")
+    
+    if not account or not password:
+        return Response(
+            {"success": False, "msg": "账号和密码不能为空"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # 注册，并返回结果
+    result = UserController.register(account, password)
+    if result["success"]:
+        return Response(
+            {"success": True, "msg": result["msg"]},
+            status=status.HTTP_201_CREATED
+        )
+    else:
+        return Response(
+            {"success": False, "msg": result["msg"]},
+            status=status.HTTP_400_BAD_REQUEST
         )
         
 @api_view(["GET"])
@@ -156,32 +184,44 @@ def get_all_prompts(request):
 @api_view(["GET"])
 def export_chat_histories(request): 
     """ 
-    将src/chat_histories文件夹压缩为zip文件并提供下载 
+    从MongoDB导出聊天历史为zip文件并提供下载 
     """ 
-    from .models import CHAT_HISTORIES_DIR 
-    
     # 创建临时文件用于存储zip 
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp_file: 
         temp_file_path = tmp_file.name 
     
     # 创建zip文件 
     with zipfile.ZipFile(temp_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf: 
-        for root, dirs, files in os.walk(CHAT_HISTORIES_DIR): 
-            for file in files: 
-                file_path = os.path.join(root, file) 
-                # 计算文件在压缩包内的路径 
-                arcname = os.path.relpath(file_path, os.path.dirname(CHAT_HISTORIES_DIR)) 
-                zipf.write(file_path, arcname) 
+        # 从MongoDB获取所有聊天历史
+        from .models import mongo_db
+        chat_histories = mongo_db.find('chat_histories', {})
+        
+        # 将每条聊天历史保存为单独的JSON文件
+        for history in chat_histories:
+            chat_id = history.get('chat_history_id')
+            if chat_id:
+                # 创建临时JSON文件
+                with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as json_file:
+                    json_path = json_file.name
+                    # 写入JSON数据
+                    with open(json_path, 'w', encoding='utf-8') as f:
+                        json.dump(history, f, ensure_ascii=False, indent=2)
+                    
+                    # 添加到zip文件
+                    zipf.write(json_path, f'chat_history_{chat_id}.json')
+                    
+                    # 删除临时JSON文件
+                    os.unlink(json_path)
     
-    # 返回文件以供下载 
-    response = FileResponse(open(temp_file_path, 'rb'), as_attachment=True) 
-    response['Content-Disposition'] = 'attachment; filename=chat_histories.zip' 
+    # 返回文件以供下载
+    response = FileResponse(open(temp_file_path, 'rb'), as_attachment=True)
+    response['Content-Disposition'] = 'attachment; filename=chat_histories.zip'
     
-    # 添加一个回调，在响应结束后删除临时文件 
-    def close_and_cleanup(): 
-        if os.path.exists(temp_file_path): 
-            os.unlink(temp_file_path) 
+    # 添加一个回调，在响应结束后删除临时文件
+    def close_and_cleanup():
+        if os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
     
-    response.close = close_and_cleanup 
+    response.close = close_and_cleanup
     
     return response

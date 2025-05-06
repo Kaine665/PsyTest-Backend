@@ -1,4 +1,4 @@
-from .models import User, ChatHistory,Patient, Prompt
+from .models import User, ChatHistory, Patient, Prompt
 from .chat_robot import ChatRobot
 from jinja2 import Template 
 import datetime
@@ -13,6 +13,17 @@ class UserController:
         if user.password != password:
             return {"success": False, "msg": "密码错误"}
         return {"success": True, "msg": "登录成功"}
+    
+    @staticmethod
+    def register(account, password):
+        # 检查用户是否已存在
+        existing_user = User.load(account)
+        if existing_user:
+            return {"success": False, "msg": "用户已存在"}
+        # 创建新用户
+        user = User(account=account, password=password)
+        user.save()
+        return {"success": True, "msg": "注册成功"}
     
 class ChatHistoryController:
     @staticmethod
@@ -72,20 +83,10 @@ class PatientController:
 
     @staticmethod
     def get_all_patients():
-        from .models import PATIENTS_DIR, Patient
-        import os, json
-
-        patients = []
-        try:
-            for file_name in os.listdir(PATIENTS_DIR):
-                file_path = os.path.join(PATIENTS_DIR, file_name)
-                with open(file_path, "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    patients.append(data)
-            return {"success": True, "data": patients}
-        except Exception as e:
-            print(f"读取病人数据出错: {str(e)}")
-            return {"success": False, "msg": f"读取病人数据出错: {str(e)}"}
+        patients = Patient.load_all()
+        if not patients:
+            return {"success": False, "msg": "未找到角色信息"}
+        return {"success": True, "data": patients}
         
 class PromptController:
     @staticmethod
@@ -97,20 +98,10 @@ class PromptController:
 
     @staticmethod
     def get_all_prompts():
-        from .models import PROMPTS_DIR
-        import os, json
-
-        prompts = []
-        try:
-            for file_name in os.listdir(PROMPTS_DIR):
-                file_path = os.path.join(PROMPTS_DIR, file_name)
-                with open(file_path, "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    prompts.append(data)
-            return {"success": True, "data": prompts}
-        except Exception as e:
-            print(f"读取提示数据出错: {str(e)}")
-            return {"success": False, "msg": f"读取提示数据出错: {str(e)}"}
+        prompts = Prompt.load_all()
+        if not prompts:
+            return {"success": False, "msg": "未找到练习类型信息"}
+        return {"success": True, "data": prompts}
     
 class ChatRobotService:
     @staticmethod
@@ -155,12 +146,13 @@ class ChatRobotService:
             if not chat_history:
                 return {"success": False, "msg": "未找到聊天记录"}
             filtered_history = [msg for msg in chat_history.content if msg["role"] != "feedback"]
-            from .models import PROMPTS_DIR
-            import os, json
-            feedback_prompt_path = os.path.join(PROMPTS_DIR, "督导-单句反馈-prompt.json")
-            with open(feedback_prompt_path, "r", encoding="utf-8") as f:
-                feedback_prompt = json.load(f)["prompt"]
-            ai_robot = ChatRobot(company="openrouter", model="google/gemini-2.5-pro-preview-03-25", prompt=feedback_prompt, chat_history=filtered_history)
+            
+            # 从数据库获取督导反馈的 prompt
+            feedback_prompt = Prompt.load("督导-单句反馈")
+            if not feedback_prompt:
+                return {"success": False, "msg": "未找到督导反馈提示"}
+            
+            ai_robot = ChatRobot(company="openrouter", model="google/gemini-2.5-pro-preview-03-25", prompt=feedback_prompt.prompt, chat_history=filtered_history)
             ai_robot.addUserMessage(input_value)
             ai_response = ai_robot.generateAiResponse()
             return {"success": True, "data": ai_response}

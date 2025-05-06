@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('login', views.login),
+    path('register', views.register),  # 新增注册接口
     path('chat_history/save', views.save_chat_history),
     path('chat_history/delete', views.delete_chat_history),
     path('chat_history/user/<str:user_id>', views.get_chat_histories_by_user),
