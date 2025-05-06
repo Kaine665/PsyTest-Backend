@@ -61,8 +61,14 @@ def delete_chat_history(request):
        
 @api_view(["GET"])
 def get_chat_histories_by_user(request, user_id):
-    result = ChatHistoryController.get_histories_by_user(user_id)
-    return Response(result, status=status.HTTP_200_OK)
+    try:
+        result = ChatHistoryController.get_histories_by_user(user_id)
+        return Response(result, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"success": False, "msg": f"服务器内部错误: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(["POST"])
 def save_chat_history(request):
