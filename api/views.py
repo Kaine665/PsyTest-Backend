@@ -5,7 +5,7 @@ from django.http import FileResponse
 import tempfile
 import zipfile
 import os
-from .services import UserController, ChatHistoryController, PatientController, PromptController, ChatRobotService
+from .services import UserService as UserController, ChatService as ChatHistoryController, PatientService as PatientController, PromptService as PromptController, ChatRobotService
 
 # Create your views here.
 @api_view(['POST'])
