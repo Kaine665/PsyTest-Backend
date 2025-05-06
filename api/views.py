@@ -158,7 +158,7 @@ def export_chat_histories(request):
     """ 
     将MongoDB中的聊天历史导出为zip文件并提供下载 
     """ 
-    from .models import CHAT_HISTORIES_DIR, chat_collection
+    from .models import chat_collection
     import tempfile
     import zipfile
     import json

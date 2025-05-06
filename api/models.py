@@ -22,8 +22,6 @@ class User:
                     return User(account=data["account"], password=data["password"])
         return None
 
-CHAT_HISTORIES_DIR = "api/src/chat_histories"
-
 # MongoDB连接设置
 MONGO_URI = "mongodb+srv://Kaine:j877413fxt@clusterpsy.pylcmi3.mongodb.net/"
 MONGO_DB = "PsyTest"
@@ -33,6 +31,9 @@ MONGO_COLLECTION = "chatHistories"
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[MONGO_DB]
 chat_collection = db[MONGO_COLLECTION]
+
+# 仅为保持兼容性保留此常量，不再用于数据存储
+CHAT_HISTORIES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", "chat_histories")
 
 class ChatHistory:
     def __init__(self, chat_history_id, user_id, prompt_id, patient_id, update_time, content):
@@ -45,16 +46,15 @@ class ChatHistory:
         
     @staticmethod
     def load(chat_history_id):
-        # 从MongoDB中加载聊天历史
+        # 只从MongoDB中加载聊天历史
         data = chat_collection.find_one({"chat_history_id": chat_history_id})
         if not data:
-            # 尝试从文件系统加载(兼容旧数据)
-            file_path = os.path.join(CHAT_HISTORIES_DIR, f"chat_history_{chat_history_id}.json")
-            if not os.path.exists(file_path):
-                return None
-            with open(file_path, 'r', encoding="utf-8") as file:
-                data = json.load(file)
+            return None
         
+        # 移除MongoDB的_id字段
+        if '_id' in data:
+            del data['_id']
+            
         return ChatHistory(
             chat_history_id=data["chat_history_id"],
             user_id=data["user_id"],
@@ -66,36 +66,28 @@ class ChatHistory:
             
     @staticmethod
     def load_all_by_user(user_id):
-        # 从MongoDB中加载用户的所有聊天历史
-        histories = list(chat_collection.find({"user_id": user_id}))
-        
-        # 如果MongoDB中没有数据，尝试从文件系统加载(兼容旧数据)
-        if not histories:
-            histories = []
-            for file_name in os.listdir(CHAT_HISTORIES_DIR):
-                file_path = os.path.join(CHAT_HISTORIES_DIR, file_name)
-                with open(file_path, 'r', encoding="utf-8") as file:
-                    data = json.load(file)
-                    if data.get("user_id") == user_id:
-                        histories.append(data)
+        # 只从MongoDB中加载用户的所有聊天历史
+        cursor = chat_collection.find({"user_id": user_id})
+        histories = []
+        for doc in cursor:
+            # 移除MongoDB的_id字段
+            if '_id' in doc:
+                del doc['_id']
+            histories.append(doc)
         
         return histories
             
     def save(self):
-        # 保存到MongoDB
+        # 只保存到MongoDB
+        data_dict = self.__dict__
         chat_collection.update_one(
             {"chat_history_id": self.chat_history_id},
-            {"$set": self.__dict__},
+            {"$set": data_dict},
             upsert=True
         )
-        
-        # 同时保存到文件系统作为备份(可选)
-        file_path = os.path.join(CHAT_HISTORIES_DIR, f"chat_history_{self.chat_history_id}.json")
-        with open(file_path, 'w', encoding="utf-8") as file:
-            json.dump(self.__dict__, file, ensure_ascii=False, indent=2)
     
     def delete(self):
-        # 从MongoDB中删除
+        # 只从MongoDB中删除
         chat_collection.delete_one({"chat_history_id": self.chat_history_id})
         
         # 同时从文件系统中删除(如果存在)
