@@ -27,51 +27,79 @@ class UserService:
 
 class PatientService:
     @staticmethod
-    def get_all_patients():
-        patients_dir = "api/src/patients"
-        patients = []
-        
-        for file_name in os.listdir(patients_dir):
-            file_path = os.path.join(patients_dir, file_name)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                # 确保有type字段
-                if 'type' not in data:
-                    data['type'] = 'patient'
-                patients.append(data)
-                
-        # 使用序列化器验证和处理
-        serialized_patients = []
-        for patient_data in patients:
-            serializer = PatientSerializer(data=patient_data)
-            if serializer.is_valid():
-                serialized_patients.append(serializer.data)
-                
-        return serialized_patients
+    def get_patient(patient_id):
+        try:
+            patient = Patient.load(patient_id)
+            if not patient:
+                return {"success": False, "msg": "未找到患者信息"}
+            # 序列化返回
+            serializer = PatientSerializer(patient)
+            return {"success": True, "data": serializer.data}
+        except Exception as e:
+            print(f"[get_patient] Exception: {e}")
+            return {"success": False, "msg": f"服务异常: {str(e)}"}
+            
+    @staticmethod
+    def list_patients():
+        try:
+            patients = []
+            for file_name in os.listdir(PATIENTS_DIR):
+                file_path = os.path.join(PATIENTS_DIR, file_name)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        data = json.load(file)
+                        if 'type' not in data:
+                            data['type'] = 'patient'
+                        serializer = PatientSerializer(data=data)
+                        if serializer.is_valid():
+                            patients.append(serializer.validated_data)
+                        else:
+                            print(f"患者数据验证失败: {serializer.errors}, 文件: {file_path}")
+                except Exception as e:
+                    print(f"加载患者数据出错: {str(e)}, 文件: {file_path}")
+            return {"success": True, "data": patients}
+        except Exception as e:
+            print(f"[list_patients] Exception: {e}")
+            return {"success": False, "msg": f"服务异常: {str(e)}"}
 
 class PromptService:
     @staticmethod
-    def get_all_prompts():
-        prompts_dir = "api/src/prompts"
-        prompts = []
-        
-        for file_name in os.listdir(prompts_dir):
-            file_path = os.path.join(prompts_dir, file_name)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                # 确保有type字段
-                if 'type' not in data:
-                    data['type'] = 'prompt'
-                prompts.append(data)
-                
-        # 使用序列化器验证和处理
-        serialized_prompts = []
-        for prompt_data in prompts:
-            serializer = PromptSerializer(data=prompt_data)
-            if serializer.is_valid():
-                serialized_prompts.append(serializer.data)
-                
-        return serialized_prompts
+    def get_prompt(prompt_id):
+        try:
+            prompt = Prompt.load(prompt_id)
+            if not prompt:
+                return {"success": False, "msg": "未找到提示词信息"}
+            # 序列化返回
+            serializer = PromptSerializer(prompt)
+            return {"success": True, "data": serializer.data}
+        except Exception as e:
+            print(f"[get_prompt] Exception: {e}")
+            return {"success": False, "msg": f"服务异常: {str(e)}"}
+            
+    @staticmethod
+    def list_prompts():
+        try:
+            prompts = []
+            for file_name in os.listdir(PROMPTS_DIR):
+                file_path = os.path.join(PROMPTS_DIR, file_name)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        data = json.load(file)
+                        if 'type' not in data:
+                            data['type'] = 'prompt'
+                        if 'prompt_type' not in data:
+                            data['prompt_type'] = 'default'
+                        serializer = PromptSerializer(data=data)
+                        if serializer.is_valid():
+                            prompts.append(serializer.validated_data)
+                        else:
+                            print(f"提示词数据验证失败: {serializer.errors}, 文件: {file_path}")
+                except Exception as e:
+                    print(f"加载提示词数据出错: {str(e)}, 文件: {file_path}")
+            return {"success": True, "data": prompts}
+        except Exception as e:
+            print(f"[list_prompts] Exception: {e}")
+            return {"success": False, "msg": f"服务异常: {str(e)}"}
 
 class ChatService:
     @staticmethod
@@ -111,14 +139,17 @@ class ChatService:
         
     @staticmethod
     def get_chat_history(chat_history_id):
-        # 通过模型加载聊天历史
-        chat_history = ChatHistory.load(chat_history_id)
-        if not chat_history:
-            return None
-            
-        # 序列化返回
-        serializer = ChatHistorySerializer(chat_history)
-        return serializer.data
+        try:
+            # 通过模型加载聊天历史
+            chat_history = ChatHistory.load(chat_history_id)
+            if not chat_history:
+                return {"success": False, "msg": "未找到聊天记录"}
+            # 序列化返回
+            serializer = ChatHistorySerializer(chat_history)
+            return {"success": True, "data": serializer.data}
+        except Exception as e:
+            print(f"[get_chat_history] Exception: {e}")
+            return {"success": False, "msg": f"服务异常: {str(e)}"}
     
     @staticmethod
     def create_chat_history(user_id, prompt_id, patient_id):

@@ -148,11 +148,23 @@ def post_messages(request):
 
 @api_view(["GET"])
 def get_patient(request, patient_id):
-    result = PatientController.get_patient(patient_id)
-    if result["success"]:
-        return Response(result, status=status.HTTP_200_OK)
-    else:
-        return Response(result, status=status.HTTP_404_NOT_FOUND)
+    result = PatientService.get_patient(patient_id)
+    return Response(result)
+
+@api_view(['GET'])
+def list_patients(request):
+    result = PatientService.list_patients()
+    return Response(result)
+
+@api_view(['GET'])
+def get_prompt(request, prompt_id):
+    result = PromptService.get_prompt(prompt_id)
+    return Response(result)
+
+@api_view(['GET'])
+def list_prompts(request):
+    result = PromptService.list_prompts()
+    return Response(result)
 
 @api_view(["GET"])
 def get_all_patients(request):

@@ -76,68 +76,18 @@ class ChatHistorySerializer(TypedBaseSerializer):
             data['type'] = 'chat_history'
         return super().to_internal_value(data)
 
-class PatientSerializer(TypedBaseSerializer):
-    """病人信息序列化器"""
+class PatientSerializer(serializers.Serializer):
     patient_id = serializers.CharField(required=True)
-    patient_name = serializers.CharField(required=True)
-    patient_introduce = serializers.CharField(required=False, allow_blank=True, default="")
-    prompt = serializers.CharField(required=True)
-    
-    def to_representation(self, instance):
-        """从实例转换为序列化表示"""
-        if hasattr(instance, '__dict__'):
-            return {
-                'type': 'patient',
-                'patient_id': instance.patient_id,
-                'patient_name': instance.patient_name,
-                'patient_introduce': instance.patient_introduce,
-                'prompt': instance.prompt
-            }
-        return {
-            'type': 'patient',
-            'patient_id': instance.get('patient_id', ''),
-            'patient_name': instance.get('patient_name', ''),
-            'patient_introduce': instance.get('patient_introduce', ''),
-            'prompt': instance.get('prompt', '')
-        }
-    
-    def to_internal_value(self, data):
-        """反序列化验证"""
-        if not isinstance(data, dict):
-            data = json.loads(data) if isinstance(data, str) else {}
-        if 'type' not in data:
-            data['type'] = 'patient'
-        return super().to_internal_value(data)
+    patient_name = serializers.CharField(required=False, default="")
+    patient_introduce = serializers.CharField(required=False, default="")
+    prompt = serializers.CharField(required=False, default="")
+    type = serializers.CharField(required=False, default="patient")
 
-class PromptSerializer(TypedBaseSerializer):
-    """提示词序列化器"""
+class PromptSerializer(serializers.Serializer):
     prompt_id = serializers.CharField(required=True)
-    prompt_type = serializers.CharField(required=True)
+    prompt_type = serializers.CharField(required=False, default="default")
     prompt = serializers.CharField(required=True)
-    
-    def to_representation(self, instance):
-        """从实例转换为序列化表示"""
-        if hasattr(instance, '__dict__'):
-            return {
-                'type': 'prompt',
-                'prompt_id': instance.prompt_id,
-                'prompt_type': instance.prompt_type,
-                'prompt': instance.prompt
-            }
-        return {
-            'type': 'prompt',
-            'prompt_id': instance.get('prompt_id', ''),
-            'prompt_type': instance.get('prompt_type', ''),
-            'prompt': instance.get('prompt', '')
-        }
-    
-    def to_internal_value(self, data):
-        """反序列化验证"""
-        if not isinstance(data, dict):
-            data = json.loads(data) if isinstance(data, str) else {}
-        if 'type' not in data:
-            data['type'] = 'prompt'
-        return super().to_internal_value(data)
+    type = serializers.CharField(required=False, default="prompt")
 
 # 工具函数，用于序列化和反序列化
 def serialize_to_json(obj, serializer_class):

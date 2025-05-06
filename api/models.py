@@ -93,23 +93,28 @@ class Patient:
     def load(patient_id):
         for file_name in os.listdir(PATIENTS_DIR):
             file_path = os.path.join(PATIENTS_DIR, file_name)
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-                # 确保有type字段
-                if 'type' not in data:
-                    data['type'] = 'patient'
-                    
-                if data.get("patient_id") == patient_id:
-                    # 使用序列化器验证
-                    serializer = PatientSerializer(data=data)
-                    if serializer.is_valid():
-                        validated_data = serializer.validated_data
-                        return Patient(
-                            patient_id=validated_data["patient_id"],
-                            patient_name=validated_data.get("patient_name", ""),
-                            patient_introduce=validated_data.get("patient_introduce", ""),
-                            prompt=validated_data.get("prompt", "")
-                        )
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    data = json.load(file)
+                    # 确保有type字段
+                    if 'type' not in data:
+                        data['type'] = 'patient'
+                        
+                    if data.get("patient_id") == patient_id:
+                        # 使用序列化器验证
+                        serializer = PatientSerializer(data=data)
+                        if serializer.is_valid():
+                            validated_data = serializer.validated_data
+                            return Patient(
+                                patient_id=validated_data["patient_id"],
+                                patient_name=validated_data.get("patient_name", ""),
+                                patient_introduce=validated_data.get("patient_introduce", ""),
+                                prompt=validated_data.get("prompt", "")
+                            )
+                        else:
+                            print(f"患者数据验证失败: {serializer.errors}")
+            except Exception as e:
+                print(f"加载患者数据出错: {str(e)}, 文件: {file_path}")
         return None
     
 PROMPTS_DIR = "api/src/prompts"
@@ -125,22 +130,31 @@ class Prompt:
     def load(prompt_id):
         for file_name in os.listdir(PROMPTS_DIR):
             file_path = os.path.join(PROMPTS_DIR, file_name)
-            with open(file_path, 'r', encoding="utf-8") as file:
-                data = json.load(file)
-                # 确保有type字段
-                if 'type' not in data:
-                    data['type'] = 'prompt'
-                    
-                if data.get("prompt_id") == prompt_id:
-                    # 使用序列化器验证
-                    serializer = PromptSerializer(data=data)
-                    if serializer.is_valid():
-                        validated_data = serializer.validated_data
-                        return Prompt(
-                            prompt_id=validated_data["prompt_id"], 
-                            prompt_type=validated_data["prompt_type"], 
-                            prompt=validated_data["prompt"]
-                        )
+            try:
+                with open(file_path, 'r', encoding="utf-8") as file:
+                    data = json.load(file)
+                    # 确保有type字段
+                    if 'type' not in data:
+                        data['type'] = 'prompt'
+                        
+                    # 确保有prompt_type字段
+                    if 'prompt_type' not in data:
+                        data['prompt_type'] = 'default'
+                        
+                    if data.get("prompt_id") == prompt_id:
+                        # 使用序列化器验证
+                        serializer = PromptSerializer(data=data)
+                        if serializer.is_valid():
+                            validated_data = serializer.validated_data
+                            return Prompt(
+                                prompt_id=validated_data["prompt_id"], 
+                                prompt_type=validated_data["prompt_type"], 
+                                prompt=validated_data["prompt"]
+                            )
+                        else:
+                            print(f"提示词数据验证失败: {serializer.errors}")
+            except Exception as e:
+                print(f"加载提示词数据出错: {str(e)}, 文件: {file_path}")
         return None
     
 CHARACTER_DIR = "api/src/characters"
