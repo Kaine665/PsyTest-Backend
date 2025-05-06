@@ -156,22 +156,40 @@ def get_all_prompts(request):
 @api_view(["GET"])
 def export_chat_histories(request): 
     """ 
-    将src/chat_histories文件夹压缩为zip文件并提供下载 
+    将MongoDB中的聊天历史导出为zip文件并提供下载 
     """ 
-    from .models import CHAT_HISTORIES_DIR 
+    from .models import CHAT_HISTORIES_DIR, chat_collection
+    import tempfile
+    import zipfile
+    import json
+    import os
     
-    # 创建临时文件用于存储zip 
-    with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp_file: 
-        temp_file_path = tmp_file.name 
-    
-    # 创建zip文件 
-    with zipfile.ZipFile(temp_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf: 
-        for root, dirs, files in os.walk(CHAT_HISTORIES_DIR): 
-            for file in files: 
-                file_path = os.path.join(root, file) 
-                # 计算文件在压缩包内的路径 
-                arcname = os.path.relpath(file_path, os.path.dirname(CHAT_HISTORIES_DIR)) 
-                zipf.write(file_path, arcname) 
+    # 创建临时目录用于存储导出的JSON文件
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # 从MongoDB获取所有聊天历史并保存为JSON文件
+        cursor = chat_collection.find({})
+        for doc in cursor:
+            # 移除MongoDB的_id字段
+            if '_id' in doc:
+                del doc['_id']
+            
+            # 写入临时文件
+            file_path = os.path.join(temp_dir, f"chat_history_{doc['chat_history_id']}.json")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(doc, f, ensure_ascii=False, indent=2)
+        
+        # 创建临时文件用于存储zip 
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp_file: 
+            temp_file_path = tmp_file.name 
+        
+        # 创建zip文件 
+        with zipfile.ZipFile(temp_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf: 
+            for root, dirs, files in os.walk(temp_dir): 
+                for file in files: 
+                    file_path = os.path.join(root, file) 
+                    # 计算文件在压缩包内的路径 
+                    arcname = os.path.relpath(file_path, temp_dir) 
+                    zipf.write(file_path, arcname) 
     
     # 返回文件以供下载 
     response = FileResponse(open(temp_file_path, 'rb'), as_attachment=True) 

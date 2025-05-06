@@ -13,7 +13,7 @@ class UserController:
         if user.password != password:
             return {"success": False, "msg": "密码错误"}
         return {"success": True, "msg": "登录成功"}
-    
+
 class ChatHistoryController:
     @staticmethod
     def get_history(chat_history_id):
@@ -61,7 +61,7 @@ class ChatHistoryController:
         chat_history.update_time = datetime.datetime.now(beijing_tz).strftime("%Y.%m.%d  %H:%M")
         chat_history.save()
         return {"success": True, "msg": "追加消息成功"}
-    
+
 class PatientController:
     @staticmethod
     def get_patient(patient_id):
