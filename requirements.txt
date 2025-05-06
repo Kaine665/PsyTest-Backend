@@ -1,0 +1,11 @@
+django
+djangorestframework
+django-cors-headers
+pymongo[snappy,gssapi,srv,tls]
+mongoengine
+openai
+jinja2
+pandas
+requests
+gunicorn
+pytz
